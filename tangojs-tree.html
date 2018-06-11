@@ -1,0 +1,188 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../paper-tree/paper-tree.html">
+<link rel="import" href="../tangojs-polymer/with-tango.html">
+
+
+<dom-module id="tangojs-tree">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <h3>GOT Tree: {{selected}}</h3>
+    <paper-tree data$='[[datatree]]'
+        on-toggle="onToggle"
+        on-select="onSelect"
+        actions='[{
+        "label": "Play",
+        "event": "play"
+        }]'>
+
+    </paper-tree>
+  </template>
+
+  <script>
+    var Tangojs = window.Tangojs || {};
+
+    /**
+     * `tangojs-tree`
+     * TangoJS Device Tree
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+    //class TangojsTree extends Tangojs.withTango(Polymer.Element) {
+    class TangojsTree extends Polymer.Element {
+      static get is() { return 'tangojs-tree'; }
+      static get properties() {
+        return {
+          //proxy: { 
+          //  type: Object, 
+          //  readOnly: true, 
+          //  observer: 'proxyChanged' 
+          //}, 
+          //datatree: { 
+          //  type: Object, 
+          //  //readOnly: true, 
+	  //  value: {name: "Loading in progress", children:[]},
+          //  //observer: 'datatreeChanged' 
+          //}, 
+
+          model: { 
+            type: String, 
+            observer: 'onModelChange',
+            value: 'default'
+          },
+	  //db: {
+          //  type: Object,
+          //  readOnly: true,
+          //  observer: "dbChanged",
+	  //  //value: function () { return new tangojs.core.api.Database.default();}
+	  //},
+          selected: {
+            type: String,
+            readOnly: true,
+            observer: "selectedChanged",
+            notify: "true"
+          }
+        };
+      }
+
+      onModelChange(new_model, old_model){
+        console.log(`Change ${old_model} to ${new_model}`)
+        this.model = new_model
+        if( new_model === "default" ){
+          console.log('Setting the default database')
+           
+          tangojs.core.api.Database.default()
+            .then( db => {
+              //this._setDb( db )
+              this.db = db
+              this.dbChanged(db)
+               })
+
+        } else if ( new_model ) {
+          console.log(`Setting the database ${new_model}`)
+          const db = tangojs.core.api.Database( new_model )
+          this._setDb( db )
+
+        } else {
+          console.log(`Resetting the database`)
+          this._setDb( null )
+        }
+      }
+
+      dbChanged(newdb) {
+	if( newdb) {
+            this.loadDevices("DbGetDeviceDomainList", ["*"],"")
+              .then( list => {
+                console.log( "WWWWWWWWWW" )
+	        this.datatree = { name: "devices",
+                              //icon: "theaters",
+	                      open: true,
+	                      children: list,
+                              path: ""
+	      	        }
+                console.log(this.datatree)
+              })
+  
+	}else{
+            console.log( "oooooooooo" )
+	    this.datatree=[{"name": "loading..."}]
+	}
+      }
+
+      loadDevices(command, args, path) {
+          // Prepare the transformation for the paper tree model
+	  const mapPaperTreeItem = (model) => {
+	    return {
+              "name": model,
+              "icon": "hardware:device-hub",
+              "open": false,
+	      "children":["loading"],
+              "type": command,
+              "path": `${path}` 
+	    }
+	  }
+          console.log(`args = ${args}`)
+          const devDataIn = new tangojs.core.api.DeviceData(args)
+
+          return this.db.command_inout(command, devDataIn)
+                     .then(list => {
+                       return list.output.map( mapPaperTreeItem)
+                     })
+      }
+
+      onSelect(event){
+
+        const target = event.detail;
+	const data = target.get('data')
+	console.log(("target",target))
+	console.log(target.get('data'))
+        if (data.path){
+          this._setSelected(`${data.path}/${data.name}`)
+        } else {
+          this._setSelected(data.name)
+        }
+      }
+      selectedChanged(selected){
+        console.log("selected has changed")
+      }
+
+      onToggle(event){
+        const target = event.detail;
+	const data = target.get('data')
+	console.log(("target",target))
+	console.log(target.get('data'))
+        
+        if ( data.type === "DbGetDeviceDomainList" ) {
+          //target.getChildren().forEach( child => {
+            const path = data.name
+            const arg = `${path}/*`
+            this.loadDevices("DbGetDeviceFamilyList", arg, path)
+                  .then( list => {
+                    console.log( "paper-tree-node", target, list )
+                    target.set('data.children', list )
+	            //console.log("Datatree: "+this.datatree.children)
+                  })
+        } else if ( data.type === "DbGetDeviceFamilyList" ) {
+            const path = `${data.path}/${data.name}`
+            const arg = `${path}/*`
+          //target.getChildren().forEach( child => {
+            this.loadDevices("DbGetDeviceMemberList", arg, path)
+                  .then( list => {
+                    console.log( "paper-tree-node", target, list )
+                    target.set('data.children', list )
+	            //console.log("Datatree: "+this.datatree.children)
+                  })
+        }
+      }
+    }
+
+    window.customElements.define(TangojsTree.is, TangojsTree);
+  </script>
+</dom-module>
+
+

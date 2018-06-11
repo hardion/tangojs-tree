@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>tangojs-tree demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../tangojs-tree.html">
+<!-- TANGOJS SCRIPT-->
+<script src="../node_modules/tangojs-core/lib/tangojs-core.js"></script>
+<script src="../node_modules/tangojs-connector-local/lib/tangojs-connector-local.js"></script>
+<script src="../node_modules/tangojs-connector-mtango/lib/tangojs-connector-mtango.js"></script>
+
+<!--
+    Configure your connector here.
+-->
+<script type="text/javascript">
+(function (window) {
+    'use strict'
+
+       // Setup tangojs-connector-local.
+       //const model = window.tangojsLocalDemoModel.createModel()
+       //const conn = new window.tangojs.connector.local.LocalConnector(model)
+
+       // example configuration for mTango rc3 backend
+       const conn = new window.tangojs.connector.mtango.MTangoConnector(
+	            'http://w-v-kitslab-cc-0:8000/tango/rest/rc3',
+		         'w-v-kitslab-csdb-0', // hostname
+			      '10000', // port
+			           'admin', // username
+				        'admin') // password
+       console.log('Tango connection');
+            // Bind desired connector to TangoJS API.
+            window.tangojs.core.setConnector(conn)
+	       })(window)
+
+function findStylesheetsInImportedDocs(doc, map) {
+    map = map || {};
+    // map = map || new Map();
+    Array.prototype.forEach.call(doc.querySelectorAll('link[rel=import]'), (e) => {
+        const importedDoc = e.import;
+        if (importedDoc && !map[importedDoc]) {
+            const styles = importedDoc.querySelectorAll('style,link[rel=stylesheet]');
+            if (styles.length) {
+                map[importedDoc.URL] = {
+                    doc: importedDoc,
+                    styles: styles
+                };
+                // map.set(importedDoc, styles);
+            }
+            findStylesheetsInImportedDocs(importedDoc, map)
+        }
+    });
+    return map;
+}
+console.log("InImportedDocs(document)");
+console.log(findStylesheetsInImportedDocs(document));
+</script>
+
+
+
+    <custom-style>
+      <style is="custom-style" include="demo-pages-shared-styles">
+      </style>
+    </custom-style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Basic tangojs-tree demo</h3>
+      <demo-snippet>
+        <template>
+          <tangojs-tree></tangojs-tree>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
